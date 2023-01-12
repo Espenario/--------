@@ -166,7 +166,7 @@ class Window():
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
         glEnable(GL_BLEND)
 
-        #create_texture(0)
+        #create_texture(0)   #
 
         glEnable(GL_DEPTH_TEST)
         glEnable(GL_LIGHTING)
@@ -232,13 +232,13 @@ class Window():
 
         glVertexPointer(3, GL_FLOAT,0,buff)
         glDrawArrays(GL_TRIANGLE_FAN,0, len(buff))
-        #glDeleteTextures(1,texture)
+        #glDeleteTextures(1,texture)    #
 
         for i in range(len(parts)):
-            #create_texture(i)
+            #create_texture(i)  #
             glVertexPointer(3, GL_FLOAT,0,parts[i])
             glDrawArrays(GL_POLYGON,0, len(parts[i]))
-            #glDeleteTextures(1,texture)
+            #glDeleteTextures(1,texture)   #
 
 
 
