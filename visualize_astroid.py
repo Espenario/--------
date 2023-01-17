@@ -35,7 +35,7 @@ d1 = 0.0
 d2 = 0.00
 d3 = 0.0
 texture = 0
-texCoord = []
+texCoord = [[]]
 tr_x = 0
 tr_y = 0
 tr_z = 0
@@ -142,7 +142,6 @@ class Window():
         tr_x = values[0]
         tr_y = values[1]
         #print(tr_x)
-        imgui.text("Hello world!")
         imgui.end()
         imgui.render()
         impl.render(imgui.get_draw_data())
@@ -152,7 +151,7 @@ class Window():
         glfw.poll_events()
 
     def create_asteroid_surface(self):
-        global anglez, anglex, angley
+        global anglez, anglex, angley, texCoord
 
         glMatrixMode(GL_PROJECTION)
         glLoadIdentity()
@@ -213,11 +212,13 @@ class Window():
 
         tex_loc = glGetAttribLocation( program, 'texcoords')
         #print(texCoord)
-        glVertexAttribPointer(tex_loc, 2, GL_FLOAT, GL_FALSE, 0, texCoord)
+        #glVertexAttribPointer(tex_loc, 2, GL_FLOAT, GL_FALSE, 0, texCoord)
         glEnableVertexAttribArray( tex_loc )
         glEnableClientState(GL_VERTEX_ARRAY)
         glEnableClientState(GL_TEXTURE_COORD_ARRAY)
         glEnableClientState(GL_NORMAL_ARRAY)
+        glTexEnvfv(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_DECAL)
+
 
         buff = []
         for i in range(len(vertices)):
@@ -228,26 +229,40 @@ class Window():
 
         glNormalPointer(GL_FLOAT, 0, normals)
 
-        #print(len(parts))
+        texCoord = [[]]
+        extreme_points = []
 
-        glVertexPointer(3, GL_FLOAT,0,buff)
-        glDrawArrays(GL_TRIANGLE_FAN,0, len(buff))
+        for part in parts:
+            extreme_points.append(get_extreme_points(part))
+
+        for i,part in enumerate(parts):
+            get_tex_coords(part,extreme_points[i])
+        #print(len(parts))
+        print(texCoord, '-----------------------')
+
+        #glVertexPointer(3, GL_FLOAT,0,buff)
+        #glDrawArrays(GL_TRIANGLE_FAN,0, len(buff))
         #glDeleteTextures(1,texture)    #
 
         for i in range(len(parts)):
-            #create_texture(i)  #
+            create_texture(i)  #
+            glVertexAttribPointer(tex_loc, 2, GL_FLOAT, GL_FALSE, 0, texCoord[i])
+            glEnableVertexAttribArray( tex_loc )
             glVertexPointer(3, GL_FLOAT,0,parts[i])
             glDrawArrays(GL_POLYGON,0, len(parts[i]))
-            #glDeleteTextures(1,texture)   #
+            glDeleteTextures(1,texture)   #
 
 
 
         glMatrixMode(GL_MODELVIEW)
         glLoadIdentity()
 
-        glLightfv(GL_LIGHT0, GL_POSITION, [0,0, 10, 1])
-        glLightModelfv(GL_LIGHT_MODEL_AMBIENT, [0,0,0,1])
-        glLightfv(GL_LIGHT0, GL_SPOT_EXPONENT, 120)
+        #glLightfv(GL_LIGHT0, GL_DIFFUSE, [0.4, 0.7, 0.2])
+        glLightfv(GL_LIGHT0, GL_POSITION, [0,0, 1, 1])
+        glLightf(GL_LIGHT0, GL_CONSTANT_ATTENUATION, 0.0)
+        glLightf(GL_LIGHT0, GL_LINEAR_ATTENUATION, 0.2)
+        glLightf(GL_LIGHT0, GL_QUADRATIC_ATTENUATION, 0.4)
+
         glLightModelfv(GL_LIGHT_MODEL_LOCAL_VIEWER, GL_FALSE)
         glLightModelfv(GL_LIGHT_MODEL_TWO_SIDE, GL_FALSE)
 
@@ -272,10 +287,11 @@ class Window():
         anglez += deltaz
 
 def create_texture(index):
-    random.seed(42)
+    random.seed(34)
     material_index = np.random.randint(0,1) + index
 
-    textureSurface = pygame.image.load(f'Текстуры\{materials[material_index]}.jpg')
+    textureSurface = pygame.image.load(f'Текстуры'       
+                                        f'\{materials[material_index]}.jpg')
     textureData = pygame.image.tostring(textureSurface, "RGBA", 1)
     width = textureSurface.get_width()
     height = textureSurface.get_height()
@@ -312,7 +328,6 @@ def create_shader(shader_type, source):
     return shader
 
 def get_asteroid_border():
-    global texCoord
     n = 20
     x_center = 100
     y_center = 100
@@ -320,7 +335,6 @@ def get_asteroid_border():
     h = 2
     #glTranslatef (x_center, y_center, 0)
     vertices = []
-    texCoord = []
     angle_increment = 2 * math.pi / n
     i = 0
     random.seed(random_state)
@@ -332,8 +346,8 @@ def get_asteroid_border():
         y = (h + random_value_y)/2 * math.sin(i)
         tx = math.cos(i) * 0.5 + 0.5
         ty = math.sin(i) * 0.5 + 0.5
-        texCoord.append(tx)
-        texCoord.append(ty)
+        #texCoord.append(tx)
+        #texCoord.append(ty)
         vertices.append([x,y,0])
         i += angle_increment
     vertices = make_border_smooth(vertices)
@@ -379,6 +393,24 @@ def make_border_smooth(vertices):
 
     return new_vertices
 
+def get_tex_coords(vertices, extreme_points):
+    global texCoord
+    buf = []
+    for vertex in vertices:
+        buf.append((vertex[0] + abs(extreme_points[0]))/4)
+        buf.append((vertex[1] + abs(extreme_points[1]))/4)
+    texCoord.append(buf)
+
+def get_extreme_points(vertices):
+    min_x = 1024
+    min_y = 1024
+    for vertex in vertices:
+        if vertex[0] < min_x:
+            min_x = vertex[0]
+        if vertex[1] < min_y:
+            min_y = vertex[1]
+    return [min_x, min_y]
+
 def get_diff_areas(vertices):
     random.seed(random_state)
     buf_index_list = []
@@ -421,6 +453,7 @@ def get_diff_areas(vertices):
     i = 1
     while first_index - second_index < len(vertices) - 80:
         #print(first_index - second_index, second_index)
+        texCoord.append([])
         first_index += random.randint(10,40)
         second_index += random.randint(-40,-10)
         first_point = vertices[first_index]
